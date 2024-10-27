@@ -33,26 +33,57 @@ void initializeNodes(vector<Node>& nodes, vector<Edge>& edges, int N);
 void initializeDistanceVectors(vector<Node>& nodes, vector<Edge>& edges, int N);
 
 bool updateDistanceVectors(vector<Node>& nodes, int N, int method) {
-    bool updated = false;
+    vector<map<int, int>> oldDVs;
+    for(int i = 1; i <= N; i++){
+        oldDVs.push_back(nodes[i].distanceVector);   
+    }
+
     for (int i = 1; i <= N; ++i) {
         for (int neighbor : nodes[i].neighbors) {
             // For each neighbor, create a copy of the distance vector to send
             map<int, int> dvToSend = nodes[i].distanceVector;
 
+            // Need to store the old distance vector of the neigbor for calculations
+            map<int, int> oldDV = nodes[neighbor].distanceVector;
+
             // Now, neighbor updates its distance vector based on the received dvToSend
-            for (auto& entry : dvToSend) {
-                int dest = entry.first;
-                int cost = entry.second;
-                int newCost = nodes[neighbor].distanceVector[i] + cost;
-                if (newCost < nodes[neighbor].distanceVector[dest]) {
-                    nodes[neighbor].distanceVector[dest] = newCost;
-                    nodes[neighbor].nextHop[dest] = i;
-                    updated = true;
+            for(int j = 1; j <= N; j++){
+                // Neighbor needs to update its distance vector for all enteries
+                if(neighbor == j) continue; // Skip its own entry
+
+                int minCost = INFINITY;
+                for(int neighborsNeighbor : nodes[neighbor].neighbors){
+                    // for all neighbors of this neighbor we need to find minimum for all destination nodes
+                    // except for i, for them we need to use the one supplied by dvToSend
+                    if(neighborsNeighbor == i){
+                        if((oldDV[neighborsNeighbor] + dvToSend[j]) < minCost){
+                            minCost = oldDV[neighborsNeighbor] + nodes[neighborsNeighbor].distanceVector[j];
+                            nodes[neighbor].distanceVector[j] = minCost;
+                            nodes[neighbor].nextHop[j] = neighborsNeighbor;
+                        }
+                    }else{
+                        if((oldDV[neighborsNeighbor] + nodes[neighborsNeighbor].distanceVector[j]) < minCost){
+                            minCost = oldDV[neighborsNeighbor] + nodes[neighborsNeighbor].distanceVector[j];
+                            nodes[neighbor].distanceVector[j] = minCost;
+                            nodes[neighbor].nextHop[j] = neighborsNeighbor;
+                        }                        
+                    }
                 }
             }
         }
     }
-    return updated;
+
+    // To decide whether updated or not
+    // we need to compare old distance vectors to new distance vectors
+    for(int i = 1; i <= N; i++){
+        for(int j = 1; j <= N; j++){
+            if(i == j) continue;
+            if(oldDVs[i - 1][j] != nodes[i].distanceVector[j]){
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void printRoutingTables(const vector<Node>& nodes, int N) {
@@ -199,8 +230,10 @@ int main() {
     nodes[failDest].neighbors.erase(remove(nodes[failDest].neighbors.begin(), nodes[failDest].neighbors.end(), failSrc),
                                     nodes[failDest].neighbors.end());
 
-    // Re-initialize distance vectors
-    initializeDistanceVectors(nodes, edges, N);
+    nodes[failSrc].distanceVector[failDest] = INFINITY;
+    nodes[failDest].distanceVector[failSrc] = INFINITY;
+    nodes[failSrc].nextHop[failDest] = -1;
+    nodes[failDest].nextHop[failSrc] = -1;
 
     // Re-run the DVR algorithm until convergence or until any distance exceeds 100
     bool countToInfinity = false;
