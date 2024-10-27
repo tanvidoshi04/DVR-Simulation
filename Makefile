@@ -1,31 +1,42 @@
-# Makefile for Distance Vector Routing Simulation
-
-# Compiler to use
+# Compiler and flags
 CXX = g++
+CXXFLAGS = -Wall
 
-# Compiler flags
-CXXFLAGS = -std=c++11 -Wall -Wextra
+# Targets
+TARGETS = Part1 Part2 Part3
 
-# Target executable name
-TARGET = dvr_simulation
+# Default target: compile all
+all: $(TARGETS)
 
-# Source files
-SRC = dvr_simulation.cpp
+# Compile each part separately
+Part1: Part1.cpp
+	$(CXX) $(CXXFLAGS) -o Part1 Part1.cpp
 
-# Object files
-OBJ = $(SRC:.cpp=.o)
+Part2: Part2.cpp
+	$(CXX) $(CXXFLAGS) -o Part2 Part2.cpp
 
-# Default rule to build the target
-all: $(TARGET)
+Part3: Part3.cpp
+	$(CXX) $(CXXFLAGS) -o Part3 Part3.cpp
 
-# Rule to build the target executable
-$(TARGET): $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+# Run each part
+1: Part1
+	./Part1
 
-# Rule to compile source files into object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+part1: Part1
+	./Part1
 
-# Clean up generated files
+2: Part2
+	./Part2
+
+part2: Part2
+	./Part2
+
+3: Part3
+	./Part3
+
+part3: Part3
+	./Part3
+
+# Clean up compiled files
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(TARGETS)
