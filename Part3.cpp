@@ -2,10 +2,18 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <fstream>  // Included for file operations
+#include <sys/types.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>  // For Windows mkdir
+#else
+#include <unistd.h>  // For POSIX mkdir
+#endif
 
 using namespace std;
 
-const int INFINITY = 100; // Representation of infinity
+const int INFINITY = 999; // Representation of infinity
 
 struct Edge {
     int src;
@@ -89,6 +97,62 @@ bool checkCountToInfinity(const vector<Node>& nodes, int N) {
     return countToInfinity;
 }
 
+// Function to create directory if it doesn't exist
+void createDirectoryIfNotExists(const std::string& dirName) {
+    struct stat info;
+
+    if (stat(dirName.c_str(), &info) != 0) {
+        // Directory does not exist, create it
+#ifdef _WIN32
+        _mkdir(dirName.c_str());
+#else
+        mkdir(dirName.c_str(), 0755);
+#endif
+    } else if (info.st_mode & S_IFDIR) {
+        // Directory exists
+    } else {
+        // Path exists but is not a directory
+        cerr << dirName << " exists but is not a directory.\n";
+    }
+}
+
+// Modified function to print distance vectors to a file in matrix form in "Part1" folder
+void printDistanceVectorsToFile(const vector<Node>& nodes, int N, const string& filename) {
+    // Ensure the directory "Part1" exists
+    createDirectoryIfNotExists("Part3");
+
+    // Construct the full file path
+    string fullFilePath = "Part3/" + filename;
+
+    ofstream outFile(fullFilePath);
+    if (!outFile.is_open()) {
+        cerr << "Error opening file " << fullFilePath << "\n";
+        return;
+    }
+
+    // Print header
+    outFile << "\t";
+    for (int j = 1; j <= N; ++j) {
+        outFile << j << "\t";
+    }
+    outFile << "\n";
+
+    // For each node, print its distance vector
+    for (int i = 1; i <= N; ++i) {
+        outFile << i << "\t";
+        for (int j = 1; j <= N; ++j) {
+            if (nodes[i].distanceVector.at(j) >= INFINITY) {
+                outFile << "INF\t";
+            } else {
+                outFile << nodes[i].distanceVector.at(j) << "\t";
+            }
+        }
+        outFile << "\n";
+    }
+
+    outFile.close();
+}
+
 int main() {
     // Inputting number of routers and number of links
     int N, M;
@@ -108,8 +172,19 @@ int main() {
 
     // Run the DVR algorithm until convergence
     bool updated;
+    int iteration = 0; // Iteration counter
     do {
         updated = updateDistanceVectors(nodes, N, method);
+
+        // Increment iteration counter
+        iteration++;
+
+        // Generate filename
+        string filename = "distance_vectors_iteration_" + to_string(iteration) + ".txt";
+
+        // Print the current distance vectors to file
+        printDistanceVectorsToFile(nodes, N, filename);
+
     } while (updated);
 
     cout << "\nRouting tables after running DVR algorithm";
@@ -122,7 +197,7 @@ int main() {
     cout << "Simulate Link Failure between\n";
     cout << "Node A: ";
     cin >> failSrc;
-    cout << "\n";
+    // cout << "\n";
     cout << "Node B: ";
     cin >> failDest;
 
@@ -143,6 +218,7 @@ int main() {
 
     // Re-run the DVR algorithm until convergence or until any distance exceeds 100
     bool countToInfinity = false;
+    iteration = 0; // Reset iteration counter
     do {
         updated = updateDistanceVectors(nodes, N, method);
         countToInfinity = checkCountToInfinity(nodes, N);
@@ -150,6 +226,16 @@ int main() {
             cout << "Count-to-infinity problem detected.\n";
             break;
         }
+
+        // Increment iteration counter
+        iteration++;
+
+        // Generate filename
+        string filename = "distance_vectors_after_failure_iteration_" + to_string(iteration) + ".txt";
+
+        // Print the current distance vectors to file
+        printDistanceVectorsToFile(nodes, N, filename);
+
     } while (updated);
 
     cout << "\nRouting tables after link failure";
